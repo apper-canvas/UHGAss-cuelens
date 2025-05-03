@@ -4,6 +4,7 @@ import { Sun, Moon, Menu, X, Search, Bell, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Home from "./pages/Home";
 import Collections from "./pages/Collections";
+import Categories from "./pages/Categories";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -158,6 +159,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/collections" element={<Collections />} />
+          <Route path="/categories" element={<Categories />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
