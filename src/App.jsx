@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import { Sun, Moon, Menu, X, Search, Bell, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Home from "./pages/Home";
+import Collections from "./pages/Collections";
 import NotFound from "./pages/NotFound";
 
 function App() {
@@ -156,6 +157,7 @@ function App() {
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/collections" element={<Collections />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
