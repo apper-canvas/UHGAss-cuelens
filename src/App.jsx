@@ -1,11 +1,30 @@
 import { useState, useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/contact" element={<Contact />} />
+      
+      {/* Toast Container */}
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
 import { Sun, Moon, Menu, X, Search, Bell, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import Home from "./pages/Home";
 import Collections from "./pages/Collections";
 import Categories from "./pages/Categories";
 import NotFound from "./pages/NotFound";
+import Privacy from "./pages/Privacy";
+import Contact from "./pages/Contact";
 
 function App() {
   const [darkMode, setDarkMode] = useState(
