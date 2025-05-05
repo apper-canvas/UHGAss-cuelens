@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
-import Privacy from "./pages/Privacy";
-import Contact from "./pages/Contact";
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/contact" element={<Contact />} />
 import { Sun, Moon, Menu, X, Search, Bell, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Home from "./pages/Home";
