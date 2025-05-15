@@ -2,13 +2,13 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { MoreHorizontal, FolderOpen, Lock, Globe, Edit, Trash2, Copy, Share2 } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 function CollectionCard({ collection, viewMode }) {
   const [showMenu, setShowMenu] = useState(false);
 
   // Format date for display
-  const formattedDate = format(new Date(collection.updatedAt), "MMM d, yyyy");
+  const formattedDate = collection.updatedAt ? format(parseISO(collection.updatedAt), "MMM d, yyyy") : "Unknown date";
 
   if (viewMode === "list") {
     return (
@@ -36,7 +36,7 @@ function CollectionCard({ collection, viewMode }) {
           <div className="flex-grow min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold truncate">{collection.title}</h3>
-              {collection.isPublic ? (
+              {collection.is_public ? (
                 <Globe className="w-3.5 h-3.5 text-surface-500" />
               ) : (
                 <Lock className="w-3.5 h-3.5 text-surface-500" />
@@ -49,7 +49,7 @@ function CollectionCard({ collection, viewMode }) {
           
           <div className="flex items-center gap-3">
             <div className="text-sm text-surface-500 hidden sm:block">
-              <span>{collection.itemCount} items</span>
+              <span>{collection.item_count} items</span>
               <span className="mx-1.5">•</span>
               <span>Updated {formattedDate}</span>
             </div>
@@ -71,7 +71,7 @@ function CollectionCard({ collection, viewMode }) {
                   className="absolute right-0 top-full mt-1 z-10 w-48 bg-white dark:bg-surface-800 rounded-lg shadow-lg py-1 border border-surface-200 dark:border-surface-700"
                   onMouseLeave={() => setShowMenu(false)}
                 >
-                  <Link to={`/collections/${collection.id}`} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors">
+                <Link to={`/collections/${collection.Id}`} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors">
                     <FolderOpen className="w-4 h-4" />
                     View Collection
                   </Link>
@@ -151,10 +151,10 @@ function CollectionCard({ collection, viewMode }) {
           </div>
         )}
         
-        {/* Collection Type Badge */}
+            {collection.is_public ? (
         <div className="absolute top-3 left-3">
           <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-black/20 backdrop-blur-sm text-white text-xs">
-            {collection.isPublic ? (
+                <span>Public</span>
               <>
                 <Globe className="w-3 h-3" />
                 <span>Public</span>
@@ -186,7 +186,7 @@ function CollectionCard({ collection, viewMode }) {
                 transition={{ duration: 0.2 }}
                 className="absolute right-0 top-full mt-1 z-10 w-48 bg-white dark:bg-surface-800 rounded-lg shadow-lg py-1 border border-surface-200 dark:border-surface-700"
                 onMouseLeave={() => setShowMenu(false)}
-              >
+                <Link to={`/collections/${collection.Id}`} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors">
                 <Link to={`/collections/${collection.id}`} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors">
                   <FolderOpen className="w-4 h-4" />
                   View Collection
@@ -216,7 +216,7 @@ function CollectionCard({ collection, viewMode }) {
       
       {/* Collection Information */}
       <div className="p-4">
-        <Link to={`/collections/${collection.id}`} className="block">
+        <Link to={`/collections/${collection.Id}`} className="block">
           <h3 className="font-semibold text-lg mb-1 hover:text-primary transition-colors line-clamp-1">{collection.title}</h3>
         </Link>
         <p className="text-surface-600 dark:text-surface-400 text-sm mb-3 line-clamp-2">
@@ -224,7 +224,7 @@ function CollectionCard({ collection, viewMode }) {
         </p>
         
         <div className="flex items-center justify-between text-xs text-surface-500">
-          <span>{collection.itemCount} items</span>
+          <span>{collection.item_count} items</span>
           <span>Updated {formattedDate}</span>
         </div>
       </div>

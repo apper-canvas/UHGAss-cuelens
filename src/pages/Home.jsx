@@ -1,128 +1,85 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Filter, Plus, Bookmark, ExternalLink, Heart, MessageSquare, Share2 } from "lucide-react";
+import { Filter, Plus, Bookmark, ExternalLink, Heart, MessageSquare, Share2, Loader } from "lucide-react";
 import MainFeature from "../components/MainFeature";
+import { useDispatch, useSelector } from "react-redux";
+import { setSelectedCategory } from "../store/contentSlice";
+import { fetchContentItems, createContentItem, toggleSaveContent, toggleLikeContent } from "../services/contentItemService";
+import { useContext } from "react";
+import { AuthContext } from "../App";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 // Sample categories
 const CATEGORIES = [
   { id: "all", name: "All", color: "bg-surface-500" },
-  { id: "design", name: "Design", color: "bg-blue-500" },
-  { id: "selfhelp", name: "Self Help", color: "bg-green-500" },
-  { id: "finance", name: "Finance", color: "bg-yellow-500" },
-  { id: "tutorials", name: "Tutorials", color: "bg-purple-500" },
-  { id: "videos", name: "Videos", color: "bg-red-500" },
-  { id: "travel", name: "Travel", color: "bg-teal-500" },
-  { id: "technology", name: "Technology", color: "bg-indigo-500" },
-];
-
-// Sample content items
-const INITIAL_CONTENT = [
-  {
-    id: 1,
-    title: "10 Essential UI Design Principles",
-    description: "Learn the fundamental principles that guide effective user interface design",
-    url: "https://example.com/ui-design",
-    thumbnailUrl: "https://images.unsplash.com/photo-1561070791-2526d30994b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-    categoryId: "design",
-    likes: 124,
-    comments: 18,
-    saved: false
-  },
-  {
-    id: 2,
-    title: "Building Wealth: Investment Strategies for Beginners",
-    description: "A comprehensive guide to starting your investment journey",
-    url: "https://example.com/investment-guide",
-    thumbnailUrl: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-    categoryId: "finance",
-    likes: 89,
-    comments: 32,
-    saved: false
-  },
-  {
-    id: 3,
-    title: "Mindfulness Meditation Techniques",
-    description: "Simple meditation practices to reduce stress and improve focus",
-    url: "https://example.com/mindfulness",
-    thumbnailUrl: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-    categoryId: "selfhelp",
-    likes: 215,
-    comments: 42,
-    saved: false
-  },
-  {
-    id: 4,
-    title: "Advanced React Hooks Tutorial",
-    description: "Master the use of React Hooks with practical examples",
-    url: "https://example.com/react-hooks",
-    thumbnailUrl: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-    categoryId: "tutorials",
-    likes: 178,
-    comments: 56,
-    saved: false
-  },
-  {
-    id: 5,
-    title: "Hidden Gems of Southeast Asia",
-    description: "Discover lesser-known travel destinations in Southeast Asia",
-    url: "https://example.com/southeast-asia",
-    thumbnailUrl: "https://images.unsplash.com/photo-1528181304800-259b08848526?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-    categoryId: "travel",
-    likes: 302,
-    comments: 87,
-    saved: false
-  },
-  {
-    id: 6,
-    title: "The Future of AI in Healthcare",
-    description: "How artificial intelligence is transforming medical diagnosis and treatment",
-    url: "https://example.com/ai-healthcare",
-    thumbnailUrl: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-    categoryId: "technology",
-    likes: 156,
-    comments: 29,
-    saved: false
-  },
+  { id: "Design", name: "Design", color: "bg-blue-500" },
+  { id: "Self Help", name: "Self Help", color: "bg-green-500" },
+  { id: "Finance", name: "Finance", color: "bg-yellow-500" },
+  { id: "Tutorials", name: "Tutorials", color: "bg-purple-500" },
+  { id: "Videos", name: "Videos", color: "bg-red-500" },
+  { id: "Travel", name: "Travel", color: "bg-teal-500" },
+  { id: "Technology", name: "Technology", color: "bg-indigo-500" },
 ];
 
 function Home() {
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [content, setContent] = useState(INITIAL_CONTENT);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useContext(AuthContext);
   const [showAddContentModal, setShowAddContentModal] = useState(false);
   
-  // Filter content based on selected category
-  const filteredContent = selectedCategory === "all" 
-    ? content 
-    : content.filter(item => item.categoryId === selectedCategory);
+  // Get content state from Redux
+  const { 
+    filteredItems, 
+    selectedCategory, 
+    isLoading, 
+    error 
+  } = useSelector(state => state.content);
+
+  // Fetch content items when component mounts
+  useEffect(() => {
+    fetchContentItems(dispatch);
+  }, [dispatch]);
   
-  // Toggle save status for a content item
-  const toggleSave = (id) => {
-    setContent(content.map(item => 
-      item.id === id ? { ...item, saved: !item.saved } : item
-    ));
+  // Handle category selection
+  const handleCategoryChange = (categoryId) => {
+    dispatch(setSelectedCategory(categoryId));
   };
   
+  // Toggle save status for a content item
+  const handleToggleSave = (item) => {
+    if (!isAuthenticated) {
+      toast.info('Please log in to save content');
+      navigate('/login');
+      return;
+    }
+    toggleSaveContent(item.Id, item.saved, dispatch);
+  };
+
   // Toggle like for a content item
-  const toggleLike = (id) => {
-    setContent(content.map(item => 
-      item.id === id ? { ...item, likes: item.likes + (item.liked ? -1 : 1), liked: !item.liked } : item
-    ));
+  const handleToggleLike = (item) => {
+    if (!isAuthenticated) {
+      toast.info('Please log in to like content');
+      navigate('/login');
+      return;
+    }
+    toggleLikeContent(item.Id, item.liked, item.likes, dispatch);
   };
   
   // Add new content from MainFeature component
   const addContent = (newContent) => {
-    setContent([
-      {
-        id: content.length + 1,
-        ...newContent,
-        likes: 0,
-        comments: 0,
-        saved: false,
-        liked: false
-      },
-      ...content
-    ]);
-    setShowAddContentModal(false);
+    if (!isAuthenticated) {
+      toast.info('Please log in to add content');
+      navigate('/login');
+      return;
+    }
+    
+    createContentItem(newContent, dispatch)
+      .then(result => {
+        if (result) {
+          setShowAddContentModal(false);
+        }
+      });
   };
 
   return (
@@ -142,11 +99,14 @@ function Home() {
               onClick={() => setShowAddContentModal(true)}
               className="btn bg-white text-primary hover:bg-white/90 flex items-center gap-2"
             >
-              <Plus className="w-5 h-5" />
+                <Plus className="w-5 h-5" />
               Add New Content
             </button>
           </div>
           
+             
+             
+
           {/* Decorative elements */}
           <div className="absolute -bottom-6 -right-6 w-32 h-32 rounded-full bg-white/20 blur-xl"></div>
           <div className="absolute top-12 right-12 w-16 h-16 rounded-full bg-white/10"></div>
@@ -167,9 +127,9 @@ function Home() {
           {CATEGORIES.map(category => (
             <button
               key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
+                onClick={() => handleCategoryChange(category.id)}
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                selectedCategory === category.id
+                  selectedCategory === category.id
                   ? `${category.color} text-white`
                   : "bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 text-surface-800 dark:text-surface-200"
               }`}
@@ -180,12 +140,36 @@ function Home() {
         </div>
       </section>
       
+      {/* Loading state */}
+      {isLoading && (
+        <div className="flex justify-center items-center py-12">
+          <div className="flex flex-col items-center">
+            <Loader className="w-8 h-8 text-primary animate-spin mb-2" />
+            <p className="text-surface-600 dark:text-surface-400">Loading content...</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Error state */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 p-4 rounded-lg my-6">
+          <h3 className="font-semibold mb-1">Error loading content</h3>
+          <p>{error}</p>
+          <button 
+            onClick={() => fetchContentItems(dispatch)}
+            className="mt-2 px-4 py-2 bg-red-100 dark:bg-red-800 rounded-lg text-sm"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      
       {/* Content Grid */}
       <section className="mb-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredContent.map(item => (
+          {!isLoading && filteredItems.map(item => (
             <motion.div
-              key={item.id}
+              key={item.Id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
@@ -195,16 +179,16 @@ function Home() {
               <div className="relative aspect-[4/3] overflow-hidden">
                 <img 
                   src={item.thumbnailUrl} 
-                  alt={item.title}
+                  alt={item.title || "Content image"}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 
                 {/* Category badge */}
-                {CATEGORIES.find(cat => cat.id === item.categoryId) && (
+                {CATEGORIES.find(cat => cat.id === item.category) && (
                   <span className={`absolute top-3 left-3 px-2 py-1 rounded-md text-xs font-medium text-white ${
-                    CATEGORIES.find(cat => cat.id === item.categoryId).color
+                    CATEGORIES.find(cat => cat.id === item.category).color
                   }`}>
-                    {CATEGORIES.find(cat => cat.id === item.categoryId).name}
+                    {CATEGORIES.find(cat => cat.id === item.category).name}
                   </span>
                 )}
                 
@@ -212,10 +196,10 @@ function Home() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-3">
                   <div className="flex gap-2">
                     <button 
-                      onClick={() => toggleLike(item.id)}
+                      onClick={() => handleToggleLike(item)}
                       className="p-2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors"
                     >
-                      <Heart className={`w-4 h-4 ${item.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
+                      <Heart className={`w-4 h-4 ${item.is_liked ? "fill-red-500 text-red-500" : "text-white"}`} />
                     </button>
                     <button className="p-2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors">
                       <MessageSquare className="w-4 h-4 text-white" />
@@ -227,14 +211,14 @@ function Home() {
                   
                   <div>
                     <button 
-                      onClick={() => toggleSave(item.id)}
+                      onClick={() => handleToggleSave(item)}
                       className={`p-2 rounded-full ${
-                        item.saved 
+                        item.is_saved 
                           ? "bg-primary text-white" 
                           : "bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white"
                       } transition-colors`}
                     >
-                      <Bookmark className={`w-4 h-4 ${item.saved ? "fill-white" : ""}`} />
+                      <Bookmark className={`w-4 h-4 ${item.is_saved ? "fill-white" : ""}`} />
                     </button>
                   </div>
                 </div>
@@ -274,7 +258,7 @@ function Home() {
           ))}
         </div>
         
-        {filteredContent.length === 0 && (
+        {!isLoading && filteredItems.length === 0 && (
           <div className="text-center py-12">
             <p className="text-surface-600 dark:text-surface-400">No content found in this category.</p>
             <button 

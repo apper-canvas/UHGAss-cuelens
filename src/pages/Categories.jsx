@@ -1,91 +1,53 @@
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 import { Filter } from "lucide-react";
 import CategoryCard from "../components/CategoryCard";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchContentItems } from "../services/contentItemService";
 
-const categoriesData = [
+// Category definitions with images and colors
+const categoryDefinitions = [
   {
-    id: 1,
-    title: "Photography",
-    count: 1248,
-    image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
-    color: "from-blue-500 to-purple-500"
-  },
-  {
-    id: 2,
+    id: "Design",
     title: "Design",
-    count: 873,
     image: "https://images.unsplash.com/photo-1545670723-196ed0954986?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
     color: "from-pink-500 to-rose-500"
   },
   {
-    id: 3,
-    title: "Illustration",
-    count: 675,
-    image: "https://images.unsplash.com/photo-1629196914220-f9f9e95338ab?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
-    color: "from-amber-400 to-orange-500"
-  },
-  {
-    id: 4,
+    id: "Technology",
     title: "Technology",
-    count: 1542,
     image: "https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
     color: "from-cyan-500 to-blue-500"
   },
   {
-    id: 5,
-    title: "Architecture",
-    count: 435,
-    image: "https://images.unsplash.com/photo-1511818966892-d7d671e672a2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
-    color: "from-gray-500 to-slate-700"
-  },
-  {
-    id: 6,
-    title: "Nature",
-    count: 928,
-    image: "https://images.unsplash.com/photo-1501854140801-50d01698950b?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
-    color: "from-green-500 to-emerald-500"
-  },
-  {
-    id: 7,
-    title: "Food",
-    count: 762,
-    image: "https://images.unsplash.com/photo-1490818387583-1baba5e638af?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
-    color: "from-yellow-400 to-amber-500"
-  },
-  {
-    id: 8,
+    id: "Travel",
     title: "Travel",
-    count: 1053,
     image: "https://images.unsplash.com/photo-1488085061387-422e29b40080?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
     color: "from-indigo-500 to-purple-600"
   },
   {
-    id: 9,
-    title: "Fashion",
-    count: 583,
-    image: "https://images.unsplash.com/photo-1445205170230-053b83016050?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
-    color: "from-fuchsia-400 to-pink-500"
+    id: "Self Help",
+    title: "Self Help",
+    image: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
+    color: "from-green-500 to-emerald-500"
   },
   {
-    id: 10,
-    title: "Art",
-    count: 835,
-    image: "https://images.unsplash.com/photo-1549887552-cb1071d3e5ca?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
-    color: "from-red-500 to-rose-500"
+    id: "Finance",
+    title: "Finance",
+    image: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
+    color: "from-yellow-400 to-amber-500"
   },
   {
-    id: 11,
-    title: "Music",
-    count: 624,
-    image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
+    id: "Tutorials",
+    title: "Tutorials",
+    image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
     color: "from-purple-500 to-violet-600"
   },
   {
-    id: 12,
-    title: "Sports",
-    count: 486,
-    image: "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
-    color: "from-blue-600 to-cyan-400"
+    id: "Videos",
+    title: "Videos",
+    image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=400&h=400&q=80",
+    color: "from-red-500 to-rose-500"
   }
 ];
 
@@ -100,6 +62,44 @@ const containerVariants = {
 };
 
 const Categories = () => {
+  const dispatch = useDispatch();
+  const [isLoading, setIsLoading] = useState(true);
+  const [categoryCounts, setCategoryCounts] = useState({});
+  
+  // Get content items from Redux
+  const { items } = useSelector(state => state.content);
+  
+  // Fetch content items when component mounts
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      await fetchContentItems(dispatch);
+      setIsLoading(false);
+    };
+    
+    loadData();
+  }, [dispatch]);
+  
+  // Calculate category counts when items change
+  useEffect(() => {
+    if (items.length > 0) {
+      // Count items in each category
+      const counts = {};
+      items.forEach(item => {
+        if (item.category) {
+          counts[item.category] = (counts[item.category] || 0) + 1;
+        }
+      });
+      setCategoryCounts(counts);
+    }
+  }, [items]);
+  
+  // Create categories data with counts
+  const categoriesData = categoryDefinitions.map(category => ({
+    ...category,
+    count: categoryCounts[category.id] || 0
+  }));
+
   return (
     <div className="container mx-auto px-4 py-12">
       {/* Header */}
@@ -142,6 +142,12 @@ const Categories = () => {
         initial="hidden"
         animate="visible"
       >
+        {isLoading ? (
+          <div className="col-span-full flex justify-center py-12">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : (
+      >
         {categoriesData.map((category) => (
           <CategoryCard 
             key={category.id} 
@@ -149,6 +155,7 @@ const Categories = () => {
           />
         ))}
       </motion.div>
+        )}
     </div>
   );
 };

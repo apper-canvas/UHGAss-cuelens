@@ -1,11 +1,19 @@
-import { useState, useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import { useState, useEffect, createContext } from "react";
+import { Routes, Route, useNavigate } from "react-router-dom";
 import { Sun, Moon, Menu, X, Search, Bell, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useDispatch, useSelector } from "react-redux";
+import { setUser, clearUser } from "./store/userSlice";
 import Home from "./pages/Home";
 import Collections from "./pages/Collections";
 import Categories from "./pages/Categories";
 import NotFound from "./pages/NotFound";
+
+// Import authentication pages
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Callback from "./pages/Callback";
+import ErrorPage from "./pages/ErrorPage";
 
 function App() {
   const [darkMode, setDarkMode] = useState(
@@ -13,7 +21,11 @@ function App() {
     window.matchMedia("(prefers-color-scheme: dark)").matches
   );
   
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const { isAuthenticated, user } = useSelector(state => state.user);
   
   useEffect(() => {
     if (darkMode) {
@@ -27,6 +39,103 @@ function App() {
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
+
+  // Initialize ApperUI once when the app loads
+  useEffect(() => {
+    const { ApperClient, ApperUI } = window.ApperSDK;
+    const client = new ApperClient({
+      apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+      apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+    });
+    
+    // Initialize but don't show login yet
+    ApperUI.setup(client, {
+      target: '#authentication',
+      clientId: import.meta.env.VITE_APPER_PROJECT_ID,
+      view: 'both',
+      onSuccess: function (user) {
+        setIsInitialized(true);
+        // CRITICAL: This exact currentPath logic must be preserved in all implementations
+        // DO NOT simplify or modify this pattern as it ensures proper redirection flow
+        let currentPath = window.location.pathname + window.location.search;
+        let redirectPath = new URLSearchParams(window.location.search).get('redirect');
+        const isAuthPage = currentPath.includes('/login') || currentPath.includes('/signup') || currentPath.includes(
+            '/callback') || currentPath.includes('/error');
+        if (user) {
+            // User is authenticated
+            if (redirectPath) {
+                navigate(redirectPath);
+            } else if (!isAuthPage) {
+                if (!currentPath.includes('/login') && !currentPath.includes('/signup')) {
+                    navigate(currentPath);
+                } else {
+                    navigate('/');
+                }
+            } else {
+                navigate('/');
+            }
+            // Store user information in Redux
+            dispatch(setUser(JSON.parse(JSON.stringify(user))));
+        } else {
+            // User is not authenticated
+            if (!isAuthPage) {
+                navigate(
+                    currentPath.includes('/signup')
+                     ? `/signup?redirect=${currentPath}`
+                     : currentPath.includes('/login')
+                     ? `/login?redirect=${currentPath}`
+                     : '/login');
+            } else if (redirectPath) {
+                if (
+                    ![
+                        'error',
+                        'signup',
+                        'login',
+                        'callback'
+                    ].some((path) => currentPath.includes(path)))
+                    navigate(`/login?redirect=${redirectPath}`);
+                else {
+                    navigate(currentPath);
+                }
+            } else if (isAuthPage) {
+                navigate(currentPath);
+            } else {
+                navigate('/login');
+            }
+            dispatch(clearUser());
+        }
+      },
+      onError: function(error) {
+        console.error("Authentication failed:", error);
+      }
+    });
+  }, [dispatch, navigate]);
+  
+  // Authentication context
+  const authContext = {
+    isAuthenticated,
+    user,
+    logout: async () => {
+      try {
+        const { ApperUI } = window.ApperSDK;
+        await ApperUI.logout();
+        dispatch(clearUser());
+        navigate('/login');
+      } catch (error) {
+        console.error("Logout failed:", error);
+      }
+    }
+  };
+
+  // Don't render until initialization is complete
+  if (!isInitialized) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-lg text-surface-600 dark:text-surface-400">Initializing application...</p>
+      </div>
+    </div>;
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -96,10 +205,20 @@ function App() {
             
             <div className="hidden md:block h-8 w-px bg-surface-200 dark:bg-surface-700 mx-1"></div>
             
-            <button className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors">
-              <User className="w-4 h-4 text-surface-600 dark:text-surface-400" />
-              <span className="text-sm font-medium">Account</span>
-            </button>
+            {isAuthenticated ? (
+              <button 
+                onClick={authContext.logout}
+                className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
+              >
+                <User className="w-4 h-4 text-surface-600 dark:text-surface-400" />
+                <span className="text-sm font-medium">Logout</span>
+              </button>
+            ) : (
+              <a href="/login" className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-100 dark:bg-surface-800 hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors">
+                <User className="w-4 h-4 text-surface-600 dark:text-surface-400" />
+                <span className="text-sm font-medium">Login</span>
+              </a>
+            )}
             
             {/* Mobile menu button */}
             <button 
@@ -152,16 +271,31 @@ function App() {
             </motion.div>
           )}
         </AnimatePresence>
-      </header>
-
-      {/* Main Content */}
+                  {isAuthenticated ? (
+                    <button 
+                      onClick={authContext.logout}
+                      className="px-3 py-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-800 dark:text-surface-200 transition-colors"
+                    >
+                      Logout
+                    </button>
+                  ) : (
+                    <a href="/login" className="px-3 py-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-800 dark:text-surface-200 transition-colors">
+                      Login
+                    </a>
+                  )}
       <main className="flex-1">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/collections" element={<Collections />} />
-          <Route path="/categories" element={<Categories />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthContext.Provider value={authContext}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/callback" element={<Callback />} />
+            <Route path="/error" element={<ErrorPage />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/collections" element={<Collections />} />
+            <Route path="/categories" element={<Categories />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthContext.Provider>
       </main>
 
       {/* Footer */}
@@ -193,3 +327,6 @@ function App() {
 }
 
 export default App;
+
+// Create auth context for global access
+export const AuthContext = createContext(null);

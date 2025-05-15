@@ -1,86 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Filter, Plus, FolderPlus, Grid, List, Search, MoreHorizontal, Archive, FileSymlink } from "lucide-react";
 import CollectionCard from "../components/CollectionCard";
-
-// Sample collection data
-const COLLECTIONS = [
-  {
-    id: 1,
-    title: "UI Design Inspiration",
-    description: "Modern interface designs and patterns for web and mobile apps",
-    thumbnails: [
-      "https://images.unsplash.com/photo-1561070791-2526d30994b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-    ],
-    itemCount: 24,
-    isPublic: true,
-    updatedAt: "2023-11-15T14:48:00.000Z"
-  },
-  {
-    id: 2,
-    title: "Financial Knowledge",
-    description: "Resources on personal finance, investing, and wealth-building strategies",
-    thumbnails: [
-      "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-    ],
-    itemCount: 18,
-    isPublic: false,
-    updatedAt: "2023-12-03T09:22:00.000Z"
-  },
-  {
-    id: 3,
-    title: "Mental Wellness",
-    description: "Content focused on mindfulness, mental health, and personal growth",
-    thumbnails: [
-      "https://images.unsplash.com/photo-1506126613408-eca07ce68773?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1509909756405-be0199881695?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1545205528-2613fd5af32a?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-    ],
-    itemCount: 32,
-    isPublic: true,
-    updatedAt: "2024-01-18T16:35:00.000Z"
-  },
-  {
-    id: 4,
-    title: "Frontend Development",
-    description: "Articles, tutorials and resources about React, Vue, CSS and more",
-    thumbnails: [
-      "https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1546146830-2cca9512c68e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-    ],
-    itemCount: 47,
-    isPublic: true,
-    updatedAt: "2024-02-05T11:14:00.000Z"
-  },
-  {
-    id: 5,
-    title: "Travel Bucket List",
-    description: "Dream destinations and travel guides for future adventures",
-    thumbnails: [
-      "https://images.unsplash.com/photo-1528181304800-259b08848526?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1502791451862-7bd8c1df43a7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-    ],
-    itemCount: 29,
-    isPublic: false,
-    updatedAt: "2024-03-01T08:42:00.000Z"
-  },
-  {
-    id: 6,
-    title: "AI & Technology Trends",
-    description: "Latest developments in artificial intelligence and emerging tech",
-    thumbnails: [
-      "https://images.unsplash.com/photo-1576091160550-2173dba999ef?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1531746790731-6c087fecd65a?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-    ],
-    itemCount: 15,
-    isPublic: true,
-    updatedAt: "2024-03-15T14:30:00.000Z"
-  }
-];
+import { useDispatch, useSelector } from "react-redux";
+import { setFilter, setSearchTerm } from "../store/collectionSlice";
+import { fetchCollections, createCollection } from "../services/collectionService";
+import { useContext } from "react";
+import { AuthContext } from "../App";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 // Filter types for collections
 const FILTERS = [
@@ -91,32 +19,65 @@ const FILTERS = [
 ];
 
 function Collections() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState("all");
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useContext(AuthContext);
   const [viewMode, setViewMode] = useState("grid"); // grid or list
   const [showCreateModal, setShowCreateModal] = useState(false);
-
-  // Filter collections based on selected filter and search term
-  const filteredCollections = COLLECTIONS.filter(collection => {
-    // Filter by visibility
-    if (selectedFilter === "public" && !collection.isPublic) return false;
-    if (selectedFilter === "private" && collection.isPublic) return false;
-    if (selectedFilter === "recent") {
-      // Consider collections updated in the last 30 days as recent
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      if (new Date(collection.updatedAt) < thirtyDaysAgo) return false;
-    }
-    
-    // Filter by search term
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      return collection.title.toLowerCase().includes(searchLower) || 
-             collection.description.toLowerCase().includes(searchLower);
-    }
-    
-    return true;
+  const [newCollection, setNewCollection] = useState({
+    title: "",
+    description: "",
+    isPublic: false
   });
+  
+  // Get collections state from Redux
+  const { 
+    filteredCollections, 
+    selectedFilter, 
+    searchTerm, 
+    isLoading,
+    error 
+  } = useSelector(state => state.collections);
+  
+  // Fetch collections when component mounts
+  useEffect(() => {
+    fetchCollections(dispatch);
+  }, [dispatch]);
+  
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    dispatch(setSearchTerm(e.target.value));
+  };
+
+  // Create new collection
+  const handleCreateCollection = async () => {
+    if (!isAuthenticated) {
+      toast.info('Please log in to create collections');
+      navigate('/login');
+      return;
+    }
+
+    if (!newCollection.title.trim()) {
+      toast.error('Collection title is required');
+      return;
+    }
+
+    const result = await createCollection({
+      title: newCollection.title,
+      description: newCollection.description,
+      isPublic: newCollection.isPublic,
+      thumbnails: []
+    }, dispatch);
+
+    if (result) {
+      setShowCreateModal(false);
+      setNewCollection({
+        title: "",
+        description: "",
+        isPublic: false
+      });
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -131,7 +92,11 @@ function Collections() {
               Organize your saved content into collections for easy access and sharing.
             </p>
             <button 
-              onClick={() => setShowCreateModal(true)}
+              {isAuthenticated ? (
+                <span>Create New Collection</span>
+              ) : (
+                <span>Sign in to Create Collections</span>
+              )}
               className="btn btn-primary flex items-center gap-2"
             >
               <FolderPlus className="w-5 h-5" />
@@ -149,7 +114,7 @@ function Collections() {
               type="text"
               placeholder="Search collections..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               className="pl-10 pr-4 py-2 w-full rounded-lg bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 focus:ring-2 focus:ring-primary/50 transition-all"
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500" />
@@ -191,7 +156,7 @@ function Collections() {
           {FILTERS.map(filter => (
             <button
               key={filter.id}
-              onClick={() => setSelectedFilter(filter.id)}
+                onClick={() => dispatch(setFilter(filter.id))}
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                 selectedFilter === filter.id
                   ? "bg-primary text-white"
@@ -205,9 +170,26 @@ function Collections() {
       </section>
 
       {/* Collections Grid/List */}
+      {/* Loading state */}
+      {isLoading && (
+        <div className="flex justify-center items-center py-12">
+          <div className="flex flex-col items-center">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-surface-600 dark:text-surface-400">Loading collections...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 p-4 rounded-lg my-6">
+          <p className="font-medium">{error}</p>
+        </div>
+      )}
+
       <section className="mb-12">
         {filteredCollections.length > 0 ? (
-          <div className={viewMode === "grid" 
+        {!isLoading && filteredCollections.length > 0 ? (
             ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" 
             : "flex flex-col gap-4"
           }>
@@ -219,11 +201,11 @@ function Collections() {
               />
             ))}
           </div>
-        ) : (
+        ) : (!isLoading && filteredCollections.length === 0) ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center py-16 bg-white dark:bg-surface-800 rounded-2xl shadow-card"
+            className="text-center py-16 my-4 bg-white dark:bg-surface-800 rounded-2xl shadow-card"
           >
             <div className="w-16 h-16 mx-auto mb-4 bg-surface-100 dark:bg-surface-700 rounded-full flex items-center justify-center">
               <Archive className="w-8 h-8 text-surface-500 dark:text-surface-400" />
@@ -238,7 +220,8 @@ function Collections() {
               <button
                 onClick={() => {
                   setSearchTerm("");
-                  setSelectedFilter("all");
+                  dispatch(setSearchTerm(""));
+                  dispatch(setFilter("all"));
                 }}
                 className="btn btn-outline flex items-center justify-center gap-2"
               >
@@ -254,7 +237,7 @@ function Collections() {
               </button>
             </div>
           </motion.div>
-        )}
+        ) : null}
       </section>
 
       {/* Create Collection Modal would go here */}
@@ -273,6 +256,8 @@ function Collections() {
                   type="text"
                   id="collection-name"
                   placeholder="My Awesome Collection"
+                  value={newCollection.title}
+                  onChange={(e) => setNewCollection({...newCollection, title: e.target.value})}
                   className="input"
                 />
               </div>
@@ -282,6 +267,8 @@ function Collections() {
                   id="collection-description"
                   placeholder="What's this collection about?"
                   rows="3"
+                  value={newCollection.description}
+                  onChange={(e) => setNewCollection({...newCollection, description: e.target.value})}
                   className="input"
                 ></textarea>
               </div>
@@ -289,11 +276,13 @@ function Collections() {
                 <label className="label">Visibility</label>
                 <div className="flex gap-3">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="visibility" value="private" className="text-primary" defaultChecked />
+                    <input type="radio" name="visibility" value="private" className="text-primary" 
+                      checked={!newCollection.isPublic} onChange={() => setNewCollection({...newCollection, isPublic: false})} />
                     <span>Private</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="visibility" value="public" className="text-primary" />
+                    <input type="radio" name="visibility" value="public" className="text-primary"
+                      checked={newCollection.isPublic} onChange={() => setNewCollection({...newCollection, isPublic: true})} />
                     <span>Public</span>
                   </label>
                 </div>
@@ -307,7 +296,7 @@ function Collections() {
                 </button>
                 <button 
                   className="btn btn-primary"
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={handleCreateCollection}
                 >
                   Create Collection
                 </button>
